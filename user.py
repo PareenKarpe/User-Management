@@ -1529,7 +1529,7 @@ def get_lambda(x):
 
     sqs = boto3.client('sqs',region_name='us-east-1')
 
-    queue_url = 'https://sqs.us-east-1.amazonaws.com/276639715572/sqs'
+    sns_queue_url = ''
 
 
 
@@ -1560,7 +1560,7 @@ def get_lambda(x):
 
     import json
     import boto3
-    arn = "arn:aws:sns:us-east-1:276639715572:email_address"
+    topic_arn = ""
     app.logger.info("message is77>>")
     app.logger.info(message)
 
