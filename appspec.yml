@@ -1,0 +1,19 @@
+version: 0.0
+os: linux
+files:
+  - source: user.py
+    destination: /home/ubuntu/
+
+  - source: cloudwatch-config.json
+    destination: /opt
+
+hooks:
+  AfterInstall:
+    - location: ./applicationStop.sh
+      timeout: 180
+      runas: ubuntu
+  ApplicationStart:
+    - location: ./applicationStart.sh
+      timeout: 180
+      runas: ubuntu
+

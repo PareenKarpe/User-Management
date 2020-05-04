@@ -1,0 +1,11 @@
+pylint == 2.4.3
+pytest == 5.2.2
+pytest-html == 2.0.0
+flask == 1.0.0
+bcrypt
+bcrypt
+mysql.connector
+python-magic
+boto3
+ec2_metadata
+statsd

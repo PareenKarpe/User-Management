@@ -1,0 +1,264 @@
+#---
+#version: 2
+#jobs:
+#  pr_check:
+#    docker:
+#      - image: circleci/openjdk:8-jdk
+#    steps:
+#      - checkout #12347711 check out source code to working directory
+#      - run:
+#          name: Gradle build
+#          command: |
+#            echo "Hello World!"
+#workflows:
+#  version: 2
+#  pr-check-workflow:
+#    jobs:
+#    - pr_check
+version: 2
+jobs:
+  build :
+    docker:
+      - image: circleci/python:3.6.9
+      - image: circleci/mysql:5.7.28
+        environment:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: test_db
+          MYSQL_USER     : user
+          MYSQL_PASSWORD: passw0rd
+
+
+
+
+
+
+    steps:
+      - checkout
+
+      - run: # install aws-cli
+          name: Install packages
+          command: sudo apt-get update && sudo apt-get install wget zip unzip -y
+
+      - run:
+          name: Install curl
+          command: |
+              sudo apt-get install curl
+              sudo curl --version
+
+      - run:
+          name: Install AWS-CLI
+          command: |
+                  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                  unzip awscliv2.zip
+                  sudo ./aws/install
+                  aws --version
+                  sudo apt-get update
+                  sudo apt-get install less -y
+      - run:
+          name: Zip Artifact
+          command: |
+            echo "Hello the current build number is ${CIRCLE_BUILD_NUM}"
+            pwd
+            find . -name appspec.yml
+            ls -al
+            mkdir -p codedeploy_artifact
+            echo "install web.py"
+            sudo pip install --upgrade pip
+            sudo pip install web.py
+            echo "install pyinstaller"
+            sudo pip install pyinstaller
+            pyinstaller user.py
+            find ./codedeploy/ -name *.sh
+            cp codedeploy/*.sh .
+            find . -name *.yml
+            zip -r webapp-csye6225-${CIRCLE_BUILD_NUM}.zip user.py cloudwatch-config.json *.csv *.sh *.yml
+            mv webapp-csye6225-${CIRCLE_BUILD_NUM}.zip codedeploy_artifact/
+            ls -al
+            pwd
+            cd codedeploy_artifact
+            echo "after ls is "
+            ls -al
+            echo "new>>>>>>>>>>>7"
+            pwd
+            cd ..
+            pwd
+            ls -al
+
+      - run:
+          name: Upload to S3 bucket
+          command: |
+            echo "Uploading artifact to S3 bucket"
+            aws s3 cp codedeploy_artifact/webapp-csye6225-${CIRCLE_BUILD_NUM}.zip s3://${BUCKET_NAME}
+
+      - run:
+          name: Make a call to Code Deploy
+          command: |
+            aws configure set region ${AWS_REGION}
+            aws deploy create-deployment --application-name csye6225-webapp --deployment-config-name CodeDeployDefault.AllAtOnce --deployment-group-name csye6225-webapp-deployment --s3-location bucket=${BUCKET_NAME},bundleType=zip,key=webapp-csye6225-${CIRCLE_BUILD_NUM}.zip
+
+      #          name: sql
+#          command: |
+#            sudo apt-get update
+#            sudo apt-get install mysql-client
+#            sudo apt-get -y install mysql-server
+#      - run:
+#          name: start service
+#          command: |
+#             sudo mysql -u root -e "CREATE DATABASE Network1;"
+#             sudo mysql -u root -e "show databases;"
+#             sudo mysql -u root -e "SELECT * FROM mysql.user";
+#      - run:
+#          name: s1
+#          command: |
+#            export MYSQL_ROOT_PASSWORD: "Pari146!"
+#            export MYSQL_HOST: "127.0.0.1"
+#            export MYSQL_DATABASE: "Network1"
+#            export MYSQL_PORT: 3306
+#            export MYSQL_USERNAME:"root"
+#            export MYSQL_DIALECT:"mysql"
+#          background: true
+      - run:
+          # Our primary container isn't MYSQL so run a sleep command until it's ready.
+          name: Waiting for MySQL to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+            nc -z 127.0.0.1 3306 && echo Success && exit 0
+            echo user
+            echo passw0rd
+            echo -n .
+            sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+
+
+
+
+
+      - run:
+          name: Install MySQL CLI; Import dummy data; run an example query
+          command: |
+            sudo apt-get install default-mysql-client
+            mysql -h 127.0.0.1 -u user -ppassw0rd test_db < sql-data/dummy.sql
+            mysql -h 127.0.0.1 -u user -ppassw0rd --execute="SELECT * FROM test_db.Persons"
+      - run:
+          name: Install Python Dependencies
+          command: |
+            echo 'export PATH=~$PATH:~/.local/bin' >> $BASH_ENV && source $BASH_ENV
+            virtualenv helloworld
+            . helloworld/bin/activate
+            pip install --no-cache-dir -r requirements.txt
+#      - run:
+#          command: |
+#            mysql -h 127.0.0.1 -u user -ppassw0rd test_db < sql-data/dummy.sql
+#            mysql -h 127.0.0.1 -u user -ppassw0rd --execute="SELECT * FROM test_db.Persons
+
+
+      - run:
+          name: Testing Python
+          command: |
+            . helloworld/bin/activate
+            python3 authenticationtest.py
+
+
+      - store_test_results:
+          # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: test_results
+      - store_artifacts: # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: test_results
+          destination: tr1
+  pr_check:
+    docker:
+      - image: circleci/python:3.6.9
+      - image: circleci/mysql:5.7.28
+        environment:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: user
+          MYSQL_PASSWORD: passw0rd
+
+
+
+
+
+
+    steps:
+      - checkout
+
+      #      - run:
+      #          name: sql
+      #          command: |
+      #            sudo apt-get update
+      #            sudo apt-get install mysql-client
+      #            sudo apt-get -y install mysql-server
+      #      - run:
+      #          name: start service
+      #          command: |
+      #             sudo mysql -u root -e "CREATE DATABASE Network1;"
+      #             sudo mysql -u root -e "show databases;"
+      #             sudo mysql -u root -e "SELECT * FROM mysql.user";
+      #      - run:
+      #          name: s1
+      #          command: |
+      #            export MYSQL_ROOT_PASSWORD: "Pari146!"
+      #            export MYSQL_HOST: "127.0.0.1"
+      #            export MYSQL_DATABASE: "Network1"
+      #            export MYSQL_PORT: 3306
+      #            export MYSQL_USERNAME:"root"
+      #            export MYSQL_DIALECT:"mysql"
+      #          background: true
+
+
+
+
+
+
+
+
+#      - run:
+#          name: Run Tests
+#          command: | pip install --no-cache-dir -r requirements.txt
+#            . helloworld/bin/activate
+#            python user.py test
+#      - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+#          path: test-results
+#      - store_artifacts: # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+#          path: test-results
+#          destination: tr1
+#      - run:
+#          name: Run Unit Tests
+#          command: |
+#            pytest --junitxml=test-reports/junit.xml --html=test-reports/pytest_report.html --self-contained-html
+#            - store_test_results:
+#                path: test-reports
+#            - store_artifacts:
+#                path: test-reports
+
+#      - run:
+#          # Our primary container isn't MYSQL so run a sleep command until it's ready. pip install --user -r requirements.txt
+#          name: Waiting for MySQL to be ready
+#          command: |
+#            for i in `seq 1 10`;
+#            do
+#            nc -z 127.0.0.1 3306 && echo Success && exit 0
+#            echo -n .
+#            sleep 1
+#            done
+#            echo Failed waiting for MySQL && exit 1
+#      - run:
+#          name: Install MySQL CLI; Import dummy data; run an example query
+#          command: |
+#            sudo apt-get install default-mysql-client
+#            sudo service mysql status
+#            sudo service mysql start
+#            mysql -h 127.0.0.1 -u root -ppassw0rd test_db < sql-data/dummy.sql
+#            mysql -h 127.0.0.1 -u user -ppassw0rd --execute="SELECT * FROM test_db.Persons"
+
+workflows:
+  version: 2
+  build-deploy-workflow:
+    jobs:
+      - build
+  pr-check-workflow:
+      jobs:
+        - pr_check
