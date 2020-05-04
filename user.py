@@ -41,12 +41,12 @@ user_id = ''
 paymentStatus = ''
 
 
-host="cd15lj1s5w4tfpk.ctb36gxu5ttc.us-east-1.rds.amazonaws.com"
+host=""
 port="3306"
-user="master"
-passwd="Pari146!"
-database='network1'
-bucketName = "csye6225ecnewdemoall71-s3bucket-1ldk1icbe2k2c"
+user=""
+passwd=""
+database=''
+bucketName = ""
 
 
 
@@ -77,11 +77,11 @@ def check(authorization_header):
     if app.config['TESTING'] == True:
         rootpw = 'passw0rd'
         mydb = mysql.connector.connect(
-        host="nd18i9o08aiwgpv.ctb36gxu5ttc.us-east-1.rds.amazonaws.com",
-        port="3306",
-        user="master",
-        passwd="Pari146!",
-        database='network1'
+        host="",
+        port="",
+        user="",
+        passwd="",
+        database=''
     )
 
 
